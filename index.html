@@ -1,0 +1,2709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Tower of Babel</title>
+<style>
+  :root {
+    --bg: #0a0612;
+    --ink: #f2e6c7;
+    --accent: #d4a24a;
+    --accent-dim: #8a6a2e;
+    --panel: rgba(14, 10, 22, 0.72);
+    --panel-edge: rgba(212, 162, 74, 0.35);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* --- Loading overlay --- */
+  #loader {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, #1a1228 0%, #0a0612 70%);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    z-index: 100;
+    transition: opacity 1.6s ease;
+  }
+  #loader.done { opacity: 0; pointer-events: none; }
+  #loader .title {
+    font-size: clamp(28px, 5vw, 54px);
+    letter-spacing: 0.35em;
+    color: var(--accent);
+    text-transform: uppercase;
+    text-shadow: 0 0 30px rgba(212, 162, 74, 0.4);
+    margin-bottom: 0.4em;
+    font-variant: small-caps;
+  }
+  #loader .sub {
+    font-style: italic;
+    color: #b8a88a;
+    opacity: 0.8;
+    max-width: 560px;
+    text-align: center;
+    line-height: 1.6;
+    padding: 0 20px;
+  }
+  #loader .progress {
+    margin-top: 40px;
+    width: 240px; height: 2px;
+    background: rgba(212, 162, 74, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  #loader .progress::before {
+    content: "";
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: 40%;
+    background: var(--accent);
+    animation: slide 1.4s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0% { left: -40%; }
+    100% { left: 100%; }
+  }
+
+  /* --- HUD / UI --- */
+  .panel {
+    position: fixed;
+    background: var(--panel);
+    backdrop-filter: blur(10px) saturate(1.1);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    border: 1px solid var(--panel-edge);
+    color: var(--ink);
+    padding: 14px 18px;
+    border-radius: 2px;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.03);
+  }
+
+  #title-card {
+    top: 22px; left: 22px;
+    max-width: 340px;
+    padding: 16px 20px 14px 20px;
+  }
+  #title-card h1 {
+    margin: 0 0 4px 0;
+    font-size: 22px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-variant: small-caps;
+    font-weight: 500;
+  }
+  #title-card .verse {
+    font-style: italic;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #c9b99a;
+    margin: 6px 0 0 0;
+    border-left: 2px solid var(--accent-dim);
+    padding-left: 10px;
+    opacity: 0.9;
+  }
+  #title-card .attrib {
+    font-size: 10.5px;
+    opacity: 0.55;
+    margin-top: 6px;
+    letter-spacing: 0.08em;
+  }
+
+  #controls {
+    top: 22px; right: 22px;
+    width: 260px;
+  }
+  #controls h2 {
+    margin: 0 0 10px 0;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.85;
+    font-weight: 500;
+  }
+  .ctrl-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 7px 0;
+    font-size: 12px;
+  }
+  .ctrl-row label { opacity: 0.85; letter-spacing: 0.04em; }
+  .ctrl-row input[type="range"] {
+    width: 120px;
+    accent-color: var(--accent);
+  }
+  .btn {
+    display: block; width: 100%;
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--panel-edge);
+    font-family: inherit;
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn:hover {
+    background: rgba(212, 162, 74, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+  .btn.primary:hover {
+    background: rgba(212, 80, 40, 0.18);
+    border-color: #d46040;
+    color: #ffbfa0;
+    text-shadow: 0 0 8px rgba(255, 120, 80, 0.5);
+  }
+
+  #hint {
+    bottom: 22px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    padding: 10px 18px;
+    opacity: 0.75;
+    text-align: center;
+    font-variant: small-caps;
+    pointer-events: none;
+  }
+  #hint kbd {
+    font-family: inherit;
+    border: 1px solid var(--panel-edge);
+    padding: 1px 6px;
+    margin: 0 3px;
+    color: var(--accent);
+    font-size: 11px;
+  }
+
+  #stats {
+    bottom: 22px; right: 22px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+    pointer-events: none;
+    font-variant: small-caps;
+  }
+  #stats span { color: var(--accent); }
+
+  /* caption shown when clicking on a tier */
+  #caption {
+    position: fixed;
+    bottom: 80px; left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    text-align: center;
+    font-style: italic;
+    color: #e8d9b8;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    max-width: 80vw;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+  }
+  #caption.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #caption .script {
+    display: block;
+    font-size: 26px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    letter-spacing: 0.2em;
+  }
+
+  /* Vignette */
+  #vignette {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center,
+      transparent 45%,
+      rgba(0,0,0,0.35) 85%,
+      rgba(0,0,0,0.7) 100%);
+    z-index: 5;
+    mix-blend-mode: multiply;
+  }
+
+  @media (max-width: 720px) {
+    #title-card { max-width: 58vw; padding: 12px 14px; }
+    #controls { width: 180px; padding: 10px 12px; }
+    .ctrl-row input[type="range"] { width: 80px; }
+    #hint { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="vignette"></div>
+
+<div id="loader">
+  <div class="title">Turris Babel</div>
+  <div class="sub">“And the whole earth was of one language, and of one speech…
+    Go to, let us build us a city and a tower, whose top may reach unto heaven.”</div>
+  <div class="progress"></div>
+</div>
+
+<div id="title-card" class="panel">
+  <h1>The Tower of Babel</h1>
+  <div class="verse">“Come, let us go down, and there confound their language, that they may not understand one another’s speech.”</div>
+  <div class="attrib">— Genesis 11 · interactive scene</div>
+</div>
+
+<div id="controls" class="panel">
+  <h2>Observe & Command</h2>
+  <div class="ctrl-row">
+    <label for="tod">Hour of Day</label>
+    <input id="tod" type="range" min="0" max="1" step="0.001" value="0.28" />
+  </div>
+  <div class="ctrl-row">
+    <label for="storm">Storm</label>
+    <input id="storm" type="range" min="0" max="1" step="0.01" value="0.35" />
+  </div>
+  <div class="ctrl-row">
+    <label for="autorot">Orbit View</label>
+    <input id="autorot" type="checkbox" checked />
+  </div>
+  <button class="btn" id="btnTop">Ascend to the Heavens</button>
+  <button class="btn" id="btnBase">Descend to the Plain</button>
+  <button class="btn primary" id="btnWrath">Confound Their Tongues</button>
+</div>
+
+<div id="caption"></div>
+
+<div id="hint">
+  Drag to orbit · scroll to zoom · <kbd>click</kbd> the tower to confound a tier · <kbd>click anywhere</kbd> first to wake the wind
+</div>
+
+<div id="stats">
+  Hour <span id="statHour">—</span> · Height <span id="statHeight">—</span> cubits
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
+import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
+
+/* =========================================================================
+   THE TOWER OF BABEL — an interactive 3D scene
+   -------------------------------------------------------------------------
+   Inspired by Bruegel's painting and Mesopotamian ziggurats. A spiral
+   ziggurat rises through cloud and storm. Workers climb the ramp. Click
+   the tower to invoke the confusion of tongues — ancient scripts rise
+   into the sky as the languages scatter.
+   ========================================================================= */
+
+/* ---------- RNG helpers ---------- */
+const rand = (a, b) => a + Math.random() * (b - a);
+const randi = (a, b) => Math.floor(rand(a, b + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const TAU = Math.PI * 2;
+
+/* ---------- Scene boot ---------- */
+const app = document.getElementById('app');
+const loader = document.getElementById('loader');
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: 'high-performance',
+  alpha: false,
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0xc9a76a, 0.0028);
+
+const camera = new THREE.PerspectiveCamera(
+  45, window.innerWidth / window.innerHeight, 0.5, 4000
+);
+camera.position.set(180, 95, 220);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 30;
+controls.maxDistance = 600;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.target.set(0, 70, 0);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.18;
+
+/* ---------- Sky (atmospheric scattering) ---------- */
+const sky = new Sky();
+sky.scale.setScalar(4000);
+scene.add(sky);
+
+const skyU = sky.material.uniforms;
+skyU['turbidity'].value = 6.5;
+skyU['rayleigh'].value = 2.4;
+skyU['mieCoefficient'].value = 0.006;
+skyU['mieDirectionalG'].value = 0.82;
+
+const sun = new THREE.Vector3();
+
+/* Directional light (sun) that follows Sky */
+const sunLight = new THREE.DirectionalLight(0xffe3b5, 2.4);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.near = 10;
+sunLight.shadow.camera.far = 700;
+const shadowBox = 260;
+sunLight.shadow.camera.left = -shadowBox;
+sunLight.shadow.camera.right = shadowBox;
+sunLight.shadow.camera.top = shadowBox;
+sunLight.shadow.camera.bottom = -shadowBox;
+sunLight.shadow.bias = -0.0004;
+sunLight.shadow.normalBias = 0.4;
+scene.add(sunLight);
+scene.add(sunLight.target);
+
+/* Hemisphere light for ambient sky fill */
+const hemi = new THREE.HemisphereLight(0xbfd0ea, 0x6a4a28, 0.6);
+scene.add(hemi);
+
+/* Ambient warm fill */
+const amb = new THREE.AmbientLight(0xffc998, 0.22);
+scene.add(amb);
+
+/* ---------- Starfield ---------- */
+const starsGeo = new THREE.BufferGeometry();
+const starCount = 5000;
+const starPos = new Float32Array(starCount * 3);
+const starSize = new Float32Array(starCount);
+const starColor = new Float32Array(starCount * 3);
+const STAR_R = 2400;
+for (let i = 0; i < starCount; i++) {
+  let theta = Math.random() * TAU;
+  let phi = Math.acos(Math.random() * 0.95 + 0.02); // top hemisphere bias
+  // milky way band: concentrate stars around great-circle tilted
+  if (Math.random() < 0.35) {
+    const bandAngle = (Math.random() - 0.5) * 0.25;
+    phi = Math.PI / 2 + bandAngle + (Math.random() - 0.5) * 0.18;
+  }
+  starPos[i*3]   = STAR_R * Math.sin(phi) * Math.cos(theta);
+  starPos[i*3+1] = STAR_R * Math.cos(phi);
+  starPos[i*3+2] = STAR_R * Math.sin(phi) * Math.sin(theta);
+  if (starPos[i*3+1] < 40) starPos[i*3+1] = Math.abs(starPos[i*3+1]) + 40;
+
+  starSize[i] = Math.pow(Math.random(), 4.5) * 4.5 + 0.6;
+  const tint = Math.random();
+  if (tint < 0.08) { starColor[i*3]=1.0; starColor[i*3+1]=0.75; starColor[i*3+2]=0.6; }
+  else if (tint < 0.18) { starColor[i*3]=0.75; starColor[i*3+1]=0.85; starColor[i*3+2]=1.0; }
+  else if (tint < 0.25) { starColor[i*3]=1.0; starColor[i*3+1]=0.95; starColor[i*3+2]=0.75; }
+  else { starColor[i*3]=1.0; starColor[i*3+1]=0.98; starColor[i*3+2]=0.92; }
+}
+starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+starsGeo.setAttribute('size', new THREE.BufferAttribute(starSize, 1));
+starsGeo.setAttribute('color', new THREE.BufferAttribute(starColor, 3));
+
+const starsMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uOpacity: { value: 0 },
+  },
+  vertexShader: `
+    attribute float size;
+    attribute vec3 color;
+    varying vec3 vColor;
+    varying float vSeed;
+    uniform float uTime;
+    void main() {
+      vColor = color;
+      vSeed = fract(sin(dot(position.xyz, vec3(12.9898,78.233,45.164))) * 43758.5453);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      float tw = 0.8 + 0.4 * sin(uTime * 2.0 + vSeed * 60.0);
+      gl_PointSize = size * tw * (420.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vColor;
+    varying float vSeed;
+    uniform float uOpacity;
+    void main() {
+      vec2 uv = gl_PointCoord - 0.5;
+      float d = length(uv);
+      float core = smoothstep(0.5, 0.0, d);
+      float spike = (1.0 - smoothstep(0.01, 0.18, abs(uv.x))) * 0.45
+                  + (1.0 - smoothstep(0.01, 0.18, abs(uv.y))) * 0.45;
+      float a = max(core, spike * smoothstep(0.5, 0.0, d));
+      if (a < 0.02) discard;
+      gl_FragColor = vec4(vColor, a * uOpacity);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+const stars = new THREE.Points(starsGeo, starsMat);
+scene.add(stars);
+
+/* Milky Way band — a soft glow volume */
+function makeMilkyWayTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,1024,256);
+  // soft horizontal glow
+  for (let i = 0; i < 300; i++) {
+    const x = rand(0, 1024), y = 128 + (Math.random() - 0.5) * 80;
+    const r = rand(30, 120);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    const a = rand(0.02, 0.08);
+    g.addColorStop(0, `rgba(200, 210, 255, ${a})`);
+    g.addColorStop(0.5, `rgba(150, 140, 220, ${a*0.5})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+  // dust lanes
+  for (let i = 0; i < 80; i++) {
+    const x = rand(0, 1024), y = 128 + (Math.random() - 0.5) * 40;
+    const r = rand(10, 40);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(40, 20, 40, ${rand(0.1, 0.3)})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const milkyWayMat = new THREE.MeshBasicMaterial({
+  map: makeMilkyWayTexture(),
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  side: THREE.BackSide,
+  blending: THREE.AdditiveBlending,
+});
+const milkyWay = new THREE.Mesh(
+  new THREE.SphereGeometry(2200, 48, 24, 0, TAU, Math.PI * 0.15, Math.PI * 0.3),
+  milkyWayMat
+);
+milkyWay.rotation.z = 0.4;
+scene.add(milkyWay);
+
+/* ---------- Moon ---------- */
+function makeMoonTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,256,256);
+  const g = ctx.createRadialGradient(110, 100, 10, 128, 128, 128);
+  g.addColorStop(0, '#fff8e8');
+  g.addColorStop(0.4, '#e8dcc0');
+  g.addColorStop(0.75, '#b0a48a');
+  g.addColorStop(1, 'rgba(80,70,60,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(128, 128, 124, 0, TAU); ctx.fill();
+  // maria (dark patches)
+  const maria = [[90, 90, 30], [140, 110, 22], [110, 150, 28], [170, 140, 18], [100, 170, 16]];
+  maria.forEach(([mx, my, mr]) => {
+    const gg = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
+    gg.addColorStop(0, 'rgba(70, 65, 60, 0.45)');
+    gg.addColorStop(1, 'rgba(70, 65, 60, 0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.fill();
+  });
+  // craters
+  for (let i = 0; i < 50; i++) {
+    const cx = rand(20, 236), cy = rand(20, 236);
+    const r = rand(1.5, 7);
+    const dx = cx - 128, dy = cy - 128;
+    if (dx*dx + dy*dy > 115*115) continue;
+    ctx.fillStyle = `rgba(60, 50, 40, ${rand(0.2, 0.45)})`;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = `rgba(255, 245, 225, ${rand(0.15, 0.3)})`;
+    ctx.beginPath(); ctx.arc(cx - r*0.3, cy - r*0.3, r*0.4, 0, TAU); ctx.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const moon = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: makeMoonTexture(), transparent: true, depthWrite: false, opacity: 0,
+  color: 0xfff8e0,
+}));
+moon.scale.set(90, 90, 1);
+scene.add(moon);
+
+/* Moon halo */
+const moonHaloMat = new THREE.SpriteMaterial({
+  map: TEX_placeholder(), // defined below
+  transparent: true, depthWrite: false, opacity: 0,
+  blending: THREE.AdditiveBlending,
+  color: 0xb4c8e8,
+});
+function TEX_placeholder() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(128,128,0,128,128,128);
+  g.addColorStop(0, 'rgba(255,255,255,0.6)');
+  g.addColorStop(0.3, 'rgba(180,200,240,0.2)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(128,128,128,0,TAU); ctx.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const moonHalo = new THREE.Sprite(moonHaloMat);
+moonHalo.scale.set(260, 260, 1);
+scene.add(moonHalo);
+
+/* Sun lens flare glow sprite (visible halo around sun) */
+const sunGlowMat = new THREE.SpriteMaterial({
+  map: TEX_placeholder(),
+  transparent: true, depthWrite: false, opacity: 0.8,
+  blending: THREE.AdditiveBlending,
+  color: 0xffd88a,
+});
+const sunGlow = new THREE.Sprite(sunGlowMat);
+sunGlow.scale.set(420, 420, 1);
+scene.add(sunGlow);
+
+/* ---------- Procedural textures ---------- */
+function makeStoneTexture(size = 512, base = [0xc0, 0x9a, 0x65], variance = 24) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  const d = img.data;
+
+  // base noise
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      // layered noise
+      const n1 = Math.sin(x * 0.03 + y * 0.02) * 0.5 + 0.5;
+      const n2 = Math.random();
+      const n3 = Math.sin(x * 0.08) * Math.cos(y * 0.06) * 0.5 + 0.5;
+      const v = (n1 * 0.3 + n2 * 0.45 + n3 * 0.25);
+      const dv = (v - 0.5) * variance * 2;
+      d[i] = Math.max(0, Math.min(255, base[0] + dv));
+      d[i+1] = Math.max(0, Math.min(255, base[1] + dv * 0.95));
+      d[i+2] = Math.max(0, Math.min(255, base[2] + dv * 0.85));
+      d[i+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // draw masonry seams
+  ctx.strokeStyle = 'rgba(40,28,14,0.55)';
+  ctx.lineWidth = 2;
+  const rows = 18, cols = 14;
+  const rowH = size / rows;
+  const colW = size / cols;
+  for (let r = 0; r < rows; r++) {
+    const y = r * rowH;
+    ctx.beginPath();
+    ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+    const offset = (r % 2) * (colW / 2);
+    for (let col = 0; col <= cols; col++) {
+      const x = col * colW + offset + (Math.random() - 0.5) * 4;
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x, y + rowH); ctx.stroke();
+    }
+  }
+
+  // splotches of shadow / weathering
+  for (let i = 0; i < 60; i++) {
+    ctx.fillStyle = `rgba(60, 40, 20, ${rand(0.03, 0.1)})`;
+    ctx.beginPath();
+    ctx.arc(rand(0, size), rand(0, size), rand(8, 40), 0, TAU);
+    ctx.fill();
+  }
+  for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = `rgba(255, 230, 180, ${rand(0.03, 0.07)})`;
+    ctx.beginPath();
+    ctx.arc(rand(0, size), rand(0, size), rand(6, 20), 0, TAU);
+    ctx.fill();
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function makeStoneNormalTexture(size = 512) {
+  // rough-and-ready normal map generated from the diffuse idea
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  // baseline normal (pointing up) = (128, 128, 255)
+  ctx.fillStyle = 'rgb(128,128,255)';
+  ctx.fillRect(0, 0, size, size);
+
+  // "grooves" at masonry seams
+  const rows = 18, cols = 14;
+  const rowH = size / rows;
+  const colW = size / cols;
+  ctx.strokeStyle = 'rgba(90,90,200,1)';
+  ctx.lineWidth = 3;
+  for (let r = 0; r < rows; r++) {
+    const y = r * rowH;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+    const offset = (r % 2) * (colW / 2);
+    for (let col = 0; col <= cols; col++) {
+      const x = col * colW + offset;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + rowH); ctx.stroke();
+    }
+  }
+
+  // bumpy pixels
+  const img = ctx.getImageData(0, 0, size, size);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const dx = (Math.random() - 0.5) * 14;
+    const dy = (Math.random() - 0.5) * 14;
+    d[i]   = Math.max(0, Math.min(255, d[i] + dx));
+    d[i+1] = Math.max(0, Math.min(255, d[i+1] + dy));
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  return t;
+}
+
+function makeSandTexture(size = 1024) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = Math.random();
+    const base = 180 + n * 40;
+    d[i]   = base;
+    d[i+1] = base * 0.88;
+    d[i+2] = base * 0.6;
+    d[i+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  // scattered darker patches
+  for (let i = 0; i < 400; i++) {
+    ctx.fillStyle = `rgba(90,60,30,${rand(0.04, 0.12)})`;
+    ctx.beginPath();
+    ctx.arc(rand(0,size), rand(0,size), rand(4, 30), 0, TAU);
+    ctx.fill();
+  }
+  // faint tracks
+  ctx.strokeStyle = 'rgba(80,50,20,0.12)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 30; i++) {
+    ctx.beginPath();
+    const sx = rand(0,size), sy = rand(0,size);
+    ctx.moveTo(sx, sy);
+    for (let j = 0; j < 40; j++) {
+      ctx.lineTo(sx + j*rand(-6,6), sy + j*rand(-6,6));
+    }
+    ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(12, 12);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function makeCloudTexture(size = 256) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const cx = size/2, cy = size/2;
+  // radial clumps
+  for (let i = 0; i < 80; i++) {
+    const a = rand(0, TAU);
+    const r = rand(0, size * 0.35);
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    const rad = rand(size*0.1, size*0.28);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    const alpha = rand(0.08, 0.25);
+    g.addColorStop(0, `rgba(255,255,255,${alpha})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU); ctx.fill();
+  }
+  // feather edges by masking
+  const img = ctx.getImageData(0, 0, size, size);
+  const d = img.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const dx = (x - cx) / cx, dy = (y - cy) / cy;
+      const r = Math.sqrt(dx*dx + dy*dy);
+      const fade = Math.max(0, 1 - Math.pow(r, 2.2));
+      d[i+3] = Math.min(255, d[i+3] * fade);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function makeScriptTexture(glyph, color = '#d4a24a') {
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = color;
+  ctx.font = '180px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 20;
+  ctx.fillText(glyph, size/2, size/2 + 8);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/* Cache textures */
+const TEX = {
+  stoneWarm: makeStoneTexture(512, [0xc9, 0x9a, 0x5f], 26),
+  stoneCool: makeStoneTexture(512, [0xa8, 0x86, 0x5a], 24),
+  stoneDark: makeStoneTexture(512, [0x7a, 0x5e, 0x3e], 22),
+  stoneNormal: makeStoneNormalTexture(512),
+  sand: makeSandTexture(1024),
+  cloud: makeCloudTexture(256),
+};
+[TEX.stoneWarm, TEX.stoneCool, TEX.stoneDark].forEach(t => t.repeat.set(4, 1));
+
+/* ---------- Ground ---------- */
+{
+  const g = new THREE.PlaneGeometry(3000, 3000, 160, 160);
+  // gentle undulation
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i);
+    const r = Math.sqrt(x*x + y*y);
+    // crater-like depression near tower base + dunes far out
+    const inner = Math.max(0, 1 - r / 90) * -2.0;
+    const dune = Math.sin(x * 0.006) * Math.cos(y * 0.005) * 6
+               + Math.sin(x * 0.018 + y*0.012) * 2.5;
+    // avoid bumps too close to tower base
+    const mask = Math.min(1, r / 110);
+    pos.setZ(i, inner + dune * mask);
+  }
+  g.computeVertexNormals();
+  const m = new THREE.MeshStandardMaterial({
+    map: TEX.sand,
+    color: 0xe8c084,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+  const ground = new THREE.Mesh(g, m);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+}
+
+/* ---------- Scattered rocks and rubble around base ---------- */
+{
+  const rockGroup = new THREE.Group();
+  const rockGeos = [
+    new THREE.DodecahedronGeometry(1, 0),
+    new THREE.IcosahedronGeometry(1, 0),
+    new THREE.OctahedronGeometry(1, 0),
+  ];
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: 0x8a6a45,
+    roughness: 0.95,
+    flatShading: true,
+  });
+
+  for (let i = 0; i < 180; i++) {
+    const g = rockGeos[i % rockGeos.length];
+    const r = new THREE.Mesh(g, rockMat);
+    const angle = Math.random() * TAU;
+    const dist = 48 + Math.pow(Math.random(), 0.4) * 380;
+    r.position.set(
+      Math.cos(angle) * dist,
+      -0.4 + Math.random() * 1.5,
+      Math.sin(angle) * dist
+    );
+    const s = rand(0.6, 3.5);
+    r.scale.set(s, s * rand(0.5, 1.2), s);
+    r.rotation.set(Math.random()*TAU, Math.random()*TAU, Math.random()*TAU);
+    r.castShadow = true;
+    r.receiveShadow = true;
+    rockGroup.add(r);
+  }
+  scene.add(rockGroup);
+
+  // a few large "quarry blocks" near the tower base
+  const blockMat = new THREE.MeshStandardMaterial({
+    map: TEX.stoneCool,
+    normalMap: TEX.stoneNormal,
+    normalScale: new THREE.Vector2(0.6, 0.6),
+    roughness: 0.95,
+  });
+  for (let i = 0; i < 18; i++) {
+    const w = rand(3, 7), h = rand(2, 4), d = rand(3, 7);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), blockMat);
+    const angle = rand(0, TAU);
+    const dist = rand(55, 90);
+    b.position.set(Math.cos(angle) * dist, h / 2 - 0.2, Math.sin(angle) * dist);
+    b.rotation.y = rand(0, TAU);
+    b.rotation.z = rand(-0.1, 0.1);
+    b.castShadow = true;
+    b.receiveShadow = true;
+    scene.add(b);
+  }
+}
+
+/* =========================================================================
+   THE TOWER
+   Procedurally generated spiral ziggurat. Tiers are cylinder segments
+   decreasing in radius, each offset vertically. A spiral ramp winds up.
+   Upper tiers become increasingly unfinished.
+   ========================================================================= */
+
+const tower = new THREE.Group();
+scene.add(tower);
+
+const tierPalette = [
+  [TEX.stoneWarm, 0xd8b07a],
+  [TEX.stoneWarm, 0xcca872],
+  [TEX.stoneCool, 0xb89770],
+  [TEX.stoneCool, 0xae8c68],
+  [TEX.stoneDark, 0x9c7d5c],
+  [TEX.stoneDark, 0x8a6e50],
+];
+
+/* Tower parameters */
+const TIER_COUNT = 9;
+const BASE_RADIUS = 46;
+const TIER_SHRINK = 3.6;
+const TIER_HEIGHT_BASE = 17;
+const TIER_HEIGHT_SHRINK = 1.1;
+const TIER_Y_GAP = 1.5; // small gap between tiers where the ramp emerges
+
+const tierInfo = []; // { y, radius, height, complete01 }
+
+function buildTier(index, yStart) {
+  const radius = BASE_RADIUS - index * TIER_SHRINK;
+  const nextRadius = BASE_RADIUS - (index + 1) * TIER_SHRINK;
+  const height = TIER_HEIGHT_BASE - index * TIER_HEIGHT_SHRINK;
+  const complete01 = Math.max(0, 1 - (index / (TIER_COUNT - 1)) * 0.9);
+  // higher tiers become increasingly unfinished (0.1 at top)
+
+  const [mapTex, tint] = tierPalette[Math.min(index, tierPalette.length - 1)];
+
+  const group = new THREE.Group();
+  group.position.y = yStart;
+
+  // Main cylinder body
+  const bodyGeo = new THREE.CylinderGeometry(
+    radius * 0.98, radius, height, 64, 1, false
+  );
+  const bodyMat = new THREE.MeshStandardMaterial({
+    map: mapTex.clone(),
+    normalMap: TEX.stoneNormal,
+    normalScale: new THREE.Vector2(0.5, 0.5),
+    color: tint,
+    roughness: 0.94,
+    metalness: 0.02,
+  });
+  bodyMat.map.needsUpdate = true;
+  bodyMat.map.repeat.set(Math.max(3, radius * 0.18), 0.7);
+  bodyMat.map.offset.set(Math.random(), 0);
+
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = height / 2;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  body.userData.tierIndex = index;
+  group.add(body);
+
+  // Crenellated top ring (battlements) — fewer on unfinished tiers
+  if (index < TIER_COUNT - 1 && complete01 > 0.2) {
+    const crenMat = new THREE.MeshStandardMaterial({
+      map: mapTex,
+      color: tint,
+      roughness: 0.95,
+    });
+    const segments = Math.floor(radius * 1.6);
+    const crenHeight = 2.0;
+    const crenWidth = (radius * 2 * Math.PI) / (segments * 1.8);
+    for (let s = 0; s < segments; s++) {
+      if (Math.random() > complete01) continue; // missing stones
+      const a = (s / segments) * TAU;
+      const cx = Math.cos(a) * radius * 0.995;
+      const cz = Math.sin(a) * radius * 0.995;
+      const cren = new THREE.Mesh(
+        new THREE.BoxGeometry(crenWidth, crenHeight, 1.6),
+        crenMat
+      );
+      cren.position.set(cx, height + crenHeight / 2, cz);
+      cren.lookAt(0, height + crenHeight / 2, 0);
+      cren.rotateY(Math.PI / 2);
+      cren.castShadow = true;
+      cren.receiveShadow = true;
+      group.add(cren);
+    }
+  }
+
+  // Horizontal decorative band near top of each tier
+  if (index < TIER_COUNT - 2) {
+    const bandGeo = new THREE.CylinderGeometry(
+      radius * 1.01, radius * 1.01, 1.6, 64, 1, true
+    );
+    const bandMat = new THREE.MeshStandardMaterial({
+      color: 0x6b5034,
+      roughness: 0.9,
+    });
+    const band = new THREE.Mesh(bandGeo, bandMat);
+    band.position.y = height - 2.8;
+    band.castShadow = true;
+    band.receiveShadow = true;
+    group.add(band);
+  }
+
+  // Proper arched windows — extruded shapes with stone frames and glowing pane
+  const windowCount = Math.max(6, Math.floor(radius * 0.7));
+  const archShape = new THREE.Shape();
+  archShape.moveTo(-0.9, 0);
+  archShape.lineTo(-0.9, 1.8);
+  archShape.absarc(0, 1.8, 0.9, Math.PI, 0, true);
+  archShape.lineTo(0.9, 0);
+  archShape.lineTo(-0.9, 0);
+  const archGeo = new THREE.ExtrudeGeometry(archShape, {
+    depth: 0.6, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.06, bevelSegments: 2,
+    steps: 1,
+  });
+  archGeo.translate(0, 0, -0.3);
+
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x4a3418, roughness: 0.85, metalness: 0.05,
+  });
+  const paneMat = new THREE.MeshStandardMaterial({
+    color: 0x1a0e06, emissive: 0xffb870, emissiveIntensity: 0.0,
+    roughness: 0.7,
+  });
+  const paneShape = new THREE.Shape();
+  paneShape.moveTo(-0.65, 0.15);
+  paneShape.lineTo(-0.65, 1.75);
+  paneShape.absarc(0, 1.75, 0.65, Math.PI, 0, true);
+  paneShape.lineTo(0.65, 0.15);
+  paneShape.lineTo(-0.65, 0.15);
+  const paneGeo = new THREE.ExtrudeGeometry(paneShape, {
+    depth: 0.15, bevelEnabled: false, steps: 1,
+  });
+  paneGeo.translate(0, 0, 0.2);
+
+  for (let w = 0; w < windowCount; w++) {
+    if (Math.random() > complete01 * 1.05) continue;
+    const a = (w / windowCount) * TAU + index * 0.13;
+    const wx = Math.cos(a) * (radius - 0.1);
+    const wz = Math.sin(a) * (radius - 0.1);
+    const baseY = rand(height * 0.2, height * 0.55);
+
+    const arch = new THREE.Mesh(archGeo, frameMat);
+    arch.position.set(wx, baseY, wz);
+    arch.lookAt(0, baseY, 0);
+    arch.castShadow = true;
+    arch.receiveShadow = true;
+    group.add(arch);
+
+    const pane = new THREE.Mesh(paneGeo, paneMat.clone());
+    pane.position.set(wx, baseY, wz);
+    pane.lookAt(0, baseY, 0);
+    pane.userData.isWindowPane = true;
+    group.add(pane);
+  }
+
+  // Grand arched entrance on bottom tiers
+  if (index === 0 || index === 1) {
+    const doorShape = new THREE.Shape();
+    doorShape.moveTo(-2.5, 0);
+    doorShape.lineTo(-2.5, 4);
+    doorShape.absarc(0, 4, 2.5, Math.PI, 0, true);
+    doorShape.lineTo(2.5, 0);
+    doorShape.lineTo(-2.5, 0);
+    const doorGeo = new THREE.ExtrudeGeometry(doorShape, {
+      depth: 1.4, bevelEnabled: true, bevelSize: 0.2, bevelThickness: 0.15,
+    });
+    doorGeo.translate(0, 0, -0.7);
+    const doorMat = new THREE.MeshStandardMaterial({
+      color: 0x2a1a0c, emissive: 0xff8030, emissiveIntensity: 0.6, roughness: 0.9,
+    });
+    const nDoors = index === 0 ? 4 : 2;
+    for (let d = 0; d < nDoors; d++) {
+      const a = (d / nDoors) * TAU + 0.2;
+      const door = new THREE.Mesh(doorGeo, doorMat);
+      door.position.set(Math.cos(a) * (radius - 0.05), 0.2, Math.sin(a) * (radius - 0.05));
+      door.lookAt(0, 0.2, 0);
+      door.castShadow = true;
+      door.userData.isDoorway = true;
+      group.add(door);
+    }
+  }
+
+  // Irregular "incomplete top" on final tier: jagged stones
+  if (index === TIER_COUNT - 1) {
+    const jagMat = new THREE.MeshStandardMaterial({
+      map: mapTex, color: tint, roughness: 0.95,
+    });
+    const jagCount = 14;
+    for (let j = 0; j < jagCount; j++) {
+      const a = (j / jagCount) * TAU + rand(-0.05, 0.05);
+      const h = rand(0.6, 4.2);
+      const w = rand(2, 4);
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, 2),
+        jagMat
+      );
+      block.position.set(
+        Math.cos(a) * radius * 0.95,
+        height + h / 2,
+        Math.sin(a) * radius * 0.95
+      );
+      block.lookAt(0, block.position.y, 0);
+      block.rotateY(Math.PI / 2);
+      block.rotation.z += rand(-0.2, 0.2);
+      block.castShadow = true;
+      block.receiveShadow = true;
+      group.add(block);
+    }
+  }
+
+  tier: {
+    tierInfo.push({
+      y: yStart,
+      topY: yStart + height,
+      radius,
+      nextRadius,
+      height,
+      complete01,
+    });
+  }
+
+  group.userData.body = body;
+  group.userData.tierIndex = index;
+  tower.add(group);
+  return { group, yTop: yStart + height };
+}
+
+/* Build all tiers */
+let yCursor = 0;
+for (let i = 0; i < TIER_COUNT; i++) {
+  const { yTop } = buildTier(i, yCursor);
+  yCursor = yTop + TIER_Y_GAP;
+}
+const TOWER_TOP_Y = yCursor;
+
+/* =========================================================================
+   SPIRAL RAMP — wraps around the entire tower from base to top
+   ========================================================================= */
+
+function buildSpiralRamp() {
+  const rampMat = new THREE.MeshStandardMaterial({
+    map: TEX.stoneCool,
+    color: 0xb8956a,
+    roughness: 0.95,
+  });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: TEX.stoneWarm,
+    color: 0xaa8860,
+    roughness: 0.95,
+  });
+
+  const totalHeight = TOWER_TOP_Y;
+  const turns = 4.2; // how many times ramp wraps
+  const segs = 280;
+  const rampWidth = 4.2;
+  const rampThickness = 1.0;
+
+  const group = new THREE.Group();
+
+  // Compute radius along height (follows tier shrinking)
+  function radiusAtHeight(h) {
+    // Find tier
+    let r = BASE_RADIUS + 1.2;
+    for (let i = 0; i < tierInfo.length; i++) {
+      const t = tierInfo[i];
+      if (h <= t.topY + TIER_Y_GAP) {
+        r = t.radius + 1.2;
+        break;
+      }
+    }
+    return r;
+  }
+
+  // Build ramp as small angled box segments
+  for (let s = 0; s < segs; s++) {
+    const t = s / segs;
+    const tN = (s + 1) / segs;
+    const h = t * totalHeight;
+    const hN = tN * totalHeight;
+    const a = t * TAU * turns;
+    const aN = tN * TAU * turns;
+
+    const r = radiusAtHeight(h);
+    const rN = radiusAtHeight(hN);
+
+    const x1 = Math.cos(a) * r, z1 = Math.sin(a) * r;
+    const x2 = Math.cos(aN) * rN, z2 = Math.sin(aN) * rN;
+
+    const midX = (x1 + x2) / 2;
+    const midZ = (z1 + z2) / 2;
+    const midY = (h + hN) / 2;
+    const dx = x2 - x1, dy = hN - h, dz = z2 - z1;
+    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    // Ramp surface segment
+    const seg = new THREE.Mesh(
+      new THREE.BoxGeometry(len * 1.01, rampThickness, rampWidth),
+      rampMat
+    );
+    seg.position.set(midX, midY, midZ);
+    // orient along travel direction
+    const dir = new THREE.Vector3(dx, dy, dz).normalize();
+    seg.lookAt(seg.position.clone().add(dir));
+    seg.rotateY(Math.PI / 2);
+    seg.castShadow = true;
+    seg.receiveShadow = true;
+    group.add(seg);
+
+    // Outer parapet (low wall) — every few segments
+    if (s % 2 === 0) {
+      const wallH = 1.5;
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(len * 1.02, wallH, 0.6),
+        wallMat
+      );
+      const outX = midX + Math.cos(a + Math.PI/2 * 0) * 0; // offset outward
+      // compute outward normal from tower center
+      const outward = new THREE.Vector3(midX, 0, midZ).normalize();
+      wall.position.set(
+        midX + outward.x * (rampWidth/2 - 0.2),
+        midY + rampThickness/2 + wallH/2,
+        midZ + outward.z * (rampWidth/2 - 0.2)
+      );
+      wall.lookAt(wall.position.clone().add(dir));
+      wall.rotateY(Math.PI / 2);
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      group.add(wall);
+    }
+  }
+
+  return { group, totalHeight, turns, radiusAtHeight, segs };
+}
+const ramp = buildSpiralRamp();
+tower.add(ramp.group);
+
+/* =========================================================================
+   SCAFFOLDING — on upper unfinished tiers
+   ========================================================================= */
+function buildScaffolding() {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({
+    color: 0x6b4a26, roughness: 0.92,
+  });
+
+  for (let i = TIER_COUNT - 3; i < TIER_COUNT; i++) {
+    const t = tierInfo[i];
+    if (!t) continue;
+    const rings = 3;
+    const posts = Math.max(10, Math.floor(t.radius * 0.45));
+    const ringY = [t.y + 2, t.y + t.height * 0.5, t.topY + 1];
+    const scaffR = t.radius + 2.2;
+
+    // vertical posts
+    for (let p = 0; p < posts; p++) {
+      if (i < TIER_COUNT - 1 && Math.random() < 0.4) continue;
+      const a = (p / posts) * TAU + i * 0.1;
+      const x = Math.cos(a) * scaffR;
+      const z = Math.sin(a) * scaffR;
+      const h = t.height + 3 + (i === TIER_COUNT - 1 ? rand(2, 8) : 0);
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, h, 6),
+        woodMat
+      );
+      post.position.set(x, t.y + h/2, z);
+      post.castShadow = true;
+      group.add(post);
+    }
+
+    // horizontal rings
+    for (let r = 0; r < rings; r++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(scaffR, 0.18, 5, Math.floor(t.radius * 2)),
+        woodMat
+      );
+      ring.position.y = ringY[r];
+      ring.rotation.x = Math.PI / 2;
+      ring.castShadow = true;
+      group.add(ring);
+    }
+
+    // some diagonals / planks at top tier
+    if (i === TIER_COUNT - 1) {
+      for (let d = 0; d < 12; d++) {
+        const a = (d / 12) * TAU;
+        const x = Math.cos(a) * scaffR;
+        const z = Math.sin(a) * scaffR;
+        const plank = new THREE.Mesh(
+          new THREE.BoxGeometry(rand(2, 4), 0.15, 0.6),
+          woodMat
+        );
+        plank.position.set(x, t.y + rand(0.5, t.height), z);
+        plank.lookAt(0, plank.position.y, 0);
+        plank.rotateY(Math.PI / 2);
+        plank.rotation.z += rand(-0.3, 0.3);
+        plank.castShadow = true;
+        group.add(plank);
+      }
+    }
+  }
+  return group;
+}
+tower.add(buildScaffolding());
+
+/* =========================================================================
+   ALTARS — burning on selected tiers, with fire particles and smoke columns
+   ========================================================================= */
+const altars = [];
+
+function buildAltar(x, y, z, ry) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  g.rotation.y = ry;
+
+  const baseMat = new THREE.MeshStandardMaterial({
+    color: 0x6b5030, roughness: 0.9,
+  });
+  const step1 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.6, 3.5), baseMat);
+  step1.position.y = 0.3; step1.castShadow = true; step1.receiveShadow = true;
+  g.add(step1);
+  const step2 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.5, 2.6), baseMat);
+  step2.position.y = 0.85; step2.castShadow = true; step2.receiveShadow = true;
+  g.add(step2);
+  const bowl = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.1, 0.8, 0.5, 16),
+    new THREE.MeshStandardMaterial({ color: 0x3a2818, roughness: 0.8, metalness: 0.2 })
+  );
+  bowl.position.y = 1.35; bowl.castShadow = true;
+  g.add(bowl);
+
+  // Fire light
+  const fireLight = new THREE.PointLight(0xff8040, 6, 60, 1.8);
+  fireLight.position.set(0, 2.5, 0);
+  g.add(fireLight);
+
+  scene.add(g);
+  altars.push({
+    group: g,
+    light: fireLight,
+    worldPos: new THREE.Vector3(x, y + 1.6, z),
+  });
+}
+
+// Place altars around tower on several tiers
+(() => {
+  const altarTiers = [0, 2, 4, 6];
+  altarTiers.forEach((ti) => {
+    const t = tierInfo[ti];
+    if (!t) return;
+    const n = ti === 0 ? 4 : 2;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + ti * 0.4;
+      const r = t.radius - 3.5;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      buildAltar(x, t.topY + 0.2, z, -a + Math.PI/2);
+    }
+  });
+})();
+
+/* Fire particles (points) shared across all altars */
+const firePointsCount = altars.length * 60;
+const fireGeo = new THREE.BufferGeometry();
+const firePos = new Float32Array(firePointsCount * 3);
+const fireData = [];
+for (let i = 0; i < firePointsCount; i++) {
+  const altarIdx = Math.floor(i / 60);
+  const origin = altars[altarIdx].worldPos;
+  fireData.push({
+    ox: origin.x, oy: origin.y, oz: origin.z,
+    life: Math.random(),
+    maxLife: rand(0.8, 1.8),
+    vy: rand(0.2, 0.6),
+    phase: rand(0, TAU),
+  });
+  firePos[i*3] = origin.x; firePos[i*3+1] = origin.y; firePos[i*3+2] = origin.z;
+}
+fireGeo.setAttribute('position', new THREE.BufferAttribute(firePos, 3));
+const fireMat = new THREE.PointsMaterial({
+  color: 0xffaa40, size: 1.8, transparent: true, opacity: 0.9,
+  depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const firePoints = new THREE.Points(fireGeo, fireMat);
+scene.add(firePoints);
+
+/* Smoke columns — elongated sprites rising from altars */
+const smokeMat = new THREE.SpriteMaterial({
+  map: TEX.cloud, transparent: true, opacity: 0.35,
+  depthWrite: false, color: 0x2a2018,
+});
+const smokePuffs = [];
+altars.forEach((altar) => {
+  for (let i = 0; i < 8; i++) {
+    const s = new THREE.Sprite(smokeMat.clone());
+    const scale = rand(6, 14);
+    s.scale.set(scale, scale, 1);
+    s.position.copy(altar.worldPos);
+    scene.add(s);
+    smokePuffs.push({
+      sprite: s,
+      altarPos: altar.worldPos.clone(),
+      age: Math.random() * 4,
+      maxAge: rand(4, 8),
+      drift: rand(0.3, 0.8),
+      swirl: rand(0.4, 1.2),
+      angle: rand(0, TAU),
+      startScale: scale,
+    });
+  }
+});
+
+/* =========================================================================
+   BANNERS / FLAGS — blowing on poles atop tiers
+   ========================================================================= */
+const banners = [];
+function buildBanner(x, y, z, faceAngle, color) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  g.rotation.y = faceAngle;
+
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 8, 6),
+    new THREE.MeshStandardMaterial({ color: 0x2a1a0c, roughness: 0.9 })
+  );
+  pole.position.y = 4; pole.castShadow = true;
+  g.add(pole);
+
+  // Flag as segmented plane for wave animation
+  const segs = 10;
+  const flagGeo = new THREE.PlaneGeometry(4, 2.4, segs, 4);
+  const flagMat = new THREE.MeshStandardMaterial({
+    color, roughness: 0.85, side: THREE.DoubleSide,
+  });
+  const flag = new THREE.Mesh(flagGeo, flagMat);
+  flag.position.set(2.1, 6.6, 0.12);
+  flag.castShadow = true;
+  g.add(flag);
+
+  // Simple emblem painted on
+  scene.add(g);
+  banners.push({
+    group: g,
+    flag,
+    baseGeo: flagGeo,
+    originalPositions: flagGeo.attributes.position.array.slice(),
+    phase: rand(0, TAU),
+  });
+}
+
+(() => {
+  const bannerColors = [0xa83a28, 0x3a5a88, 0xd4a24a, 0x6a3a68, 0x2a6a48];
+  [2, 4, 5, 6, 7].forEach((ti, idx) => {
+    const t = tierInfo[ti];
+    if (!t) return;
+    const n = 3;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + ti * 0.6;
+      const r = t.radius - 0.5;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      buildBanner(x, t.topY, z, -a + Math.PI/2, bannerColors[(idx + i) % bannerColors.length]);
+    }
+  });
+})();
+
+/* =========================================================================
+   BIRDS — flocks of small instanced triangles circling the tower
+   ========================================================================= */
+const birdCount = 60;
+const birdShape = new THREE.Shape();
+birdShape.moveTo(0, 0);
+birdShape.lineTo(-1.4, 0.4);
+birdShape.lineTo(-0.4, 0);
+birdShape.lineTo(-1.4, -0.4);
+birdShape.lineTo(0, 0);
+const birdGeo = new THREE.ShapeGeometry(birdShape);
+const birdMat = new THREE.MeshBasicMaterial({
+  color: 0x1a0e08, side: THREE.DoubleSide,
+});
+const birdMesh = new THREE.InstancedMesh(birdGeo, birdMat, birdCount);
+scene.add(birdMesh);
+
+const birds = [];
+for (let i = 0; i < birdCount; i++) {
+  birds.push({
+    radius: rand(70, 180),
+    height: rand(25, TOWER_TOP_Y * 0.9),
+    phase: rand(0, TAU),
+    speed: rand(0.08, 0.2) * (Math.random() < 0.3 ? -1 : 1),
+    tilt: rand(-0.4, 0.4),
+    wingPhase: rand(0, TAU),
+    size: rand(0.8, 1.8),
+  });
+}
+
+/* =========================================================================
+   RAIN — activated during storms
+   ========================================================================= */
+const rainCount = 2500;
+const rainGeo = new THREE.BufferGeometry();
+const rainPos = new Float32Array(rainCount * 3);
+const rainSpeed = new Float32Array(rainCount);
+const rainArea = 400;
+for (let i = 0; i < rainCount; i++) {
+  rainPos[i*3] = rand(-rainArea, rainArea);
+  rainPos[i*3+1] = rand(0, TOWER_TOP_Y + 120);
+  rainPos[i*3+2] = rand(-rainArea, rainArea);
+  rainSpeed[i] = rand(40, 90);
+}
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+rainGeo.setAttribute('speed', new THREE.BufferAttribute(rainSpeed, 1));
+
+const rainMat = new THREE.ShaderMaterial({
+  uniforms: { uOpacity: { value: 0 } },
+  vertexShader: `
+    attribute float speed;
+    varying float vSpeed;
+    void main() {
+      vSpeed = speed;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = 1.8 * (200.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: `
+    uniform float uOpacity;
+    varying float vSpeed;
+    void main() {
+      vec2 uv = gl_PointCoord - 0.5;
+      // streak shape — vertically elongated
+      float a = smoothstep(0.5, 0.0, abs(uv.x) * 2.2 + abs(uv.y) * 0.5);
+      gl_FragColor = vec4(0.7, 0.8, 1.0, a * uOpacity * 0.7);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+});
+const rain = new THREE.Points(rainGeo, rainMat);
+scene.add(rain);
+
+/* =========================================================================
+   WATER MOAT — reflective ring of water at tower base
+   ========================================================================= */
+(() => {
+  const moatOuter = BASE_RADIUS + 22;
+  const moatInner = BASE_RADIUS + 5;
+  const moatShape = new THREE.Shape();
+  moatShape.absarc(0, 0, moatOuter, 0, TAU, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, moatInner, 0, TAU, true);
+  moatShape.holes.push(hole);
+  const moatGeo = new THREE.ShapeGeometry(moatShape, 64);
+
+  const reflector = new Reflector(moatGeo, {
+    clipBias: 0.01,
+    textureWidth: window.innerWidth * 0.5,
+    textureHeight: window.innerHeight * 0.5,
+    color: 0x6a5a44,
+  });
+  reflector.rotation.x = -Math.PI / 2;
+  reflector.position.y = -0.2;
+  scene.add(reflector);
+
+  // overlay with slight tint + ripple-feel
+  const overlay = new THREE.Mesh(
+    moatGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0x3a4a55,
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.15,
+      metalness: 0.2,
+    })
+  );
+  overlay.rotation.x = -Math.PI / 2;
+  overlay.position.y = -0.15;
+  scene.add(overlay);
+
+  // stone lip around the moat
+  const lipMat = new THREE.MeshStandardMaterial({
+    map: TEX.stoneCool, color: 0x8c7252, roughness: 0.9,
+  });
+  const lipOuter = new THREE.Mesh(
+    new THREE.TorusGeometry(moatOuter + 0.5, 0.8, 6, 96),
+    lipMat
+  );
+  lipOuter.rotation.x = Math.PI / 2;
+  lipOuter.position.y = 0.3;
+  lipOuter.castShadow = true; lipOuter.receiveShadow = true;
+  scene.add(lipOuter);
+
+  const lipInner = new THREE.Mesh(
+    new THREE.TorusGeometry(moatInner - 0.5, 0.8, 6, 96),
+    lipMat
+  );
+  lipInner.rotation.x = Math.PI / 2;
+  lipInner.position.y = 0.3;
+  lipInner.castShadow = true; lipInner.receiveShadow = true;
+  scene.add(lipInner);
+})();
+
+/* =========================================================================
+   DIVINE BEAM — column of light from heaven during wrath
+   ========================================================================= */
+const beamGroup = new THREE.Group();
+scene.add(beamGroup);
+
+const beamGeo = new THREE.CylinderGeometry(26, 18, 1800, 48, 1, true);
+const beamMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uIntensity: { value: 0 },
+    uTime: { value: 0 },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    varying vec3 vPos;
+    void main() {
+      vUv = uv;
+      vPos = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec2 vUv;
+    varying vec3 vPos;
+    uniform float uIntensity;
+    uniform float uTime;
+    void main() {
+      float edge = 1.0 - abs(vUv.x * 2.0 - 1.0);
+      edge = pow(edge, 1.2);
+      float pulse = 0.9 + 0.1 * sin(uTime * 6.0 + vPos.y * 0.2);
+      vec3 col = mix(vec3(1.0, 0.92, 0.75), vec3(1.0, 1.0, 1.0), edge);
+      float a = edge * uIntensity * pulse * 0.75;
+      gl_FragColor = vec4(col, a);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  blending: THREE.AdditiveBlending,
+});
+const divineBeam = new THREE.Mesh(beamGeo, beamMat);
+divineBeam.position.set(0, TOWER_TOP_Y + 200, 0);
+beamGroup.add(divineBeam);
+
+/* secondary inner beam */
+const innerBeam = new THREE.Mesh(
+  new THREE.CylinderGeometry(8, 6, 1800, 32, 1, true),
+  beamMat.clone()
+);
+innerBeam.position.copy(divineBeam.position);
+beamGroup.add(innerBeam);
+
+/* Crumbling stones that fly off during wrath */
+const stoneChunks = [];
+const stoneMat = new THREE.MeshStandardMaterial({
+  map: TEX.stoneWarm, color: 0xb89570, roughness: 0.9,
+});
+function shedStones(count = 40) {
+  for (let i = 0; i < count; i++) {
+    const sz = rand(0.8, 2.5);
+    const chunk = new THREE.Mesh(
+      new THREE.BoxGeometry(sz, sz * rand(0.6, 1.0), sz * rand(0.6, 1.2)),
+      stoneMat
+    );
+    const a = rand(0, TAU);
+    const r = rand(1, BASE_RADIUS - (TIER_COUNT - 2) * TIER_SHRINK);
+    chunk.position.set(
+      Math.cos(a) * r,
+      rand(TOWER_TOP_Y - 20, TOWER_TOP_Y + 8),
+      Math.sin(a) * r
+    );
+    chunk.rotation.set(rand(0,TAU), rand(0,TAU), rand(0,TAU));
+    chunk.castShadow = true;
+    scene.add(chunk);
+    stoneChunks.push({
+      mesh: chunk,
+      vx: Math.cos(a) * rand(5, 18),
+      vy: rand(6, 18),
+      vz: Math.sin(a) * rand(5, 18),
+      vrx: rand(-4, 4), vry: rand(-4, 4), vrz: rand(-4, 4),
+      life: rand(4, 7),
+    });
+  }
+}
+
+/* =========================================================================
+   WORKERS — tiny figures that walk up the spiral ramp
+   ========================================================================= */
+const WORKER_COUNT = 140;
+const workerGroup = new THREE.Group();
+scene.add(workerGroup);
+
+/* Simple figure: instanced capsules */
+const workerGeo = new THREE.CapsuleGeometry(0.4, 1.1, 3, 6);
+const workerMat = new THREE.MeshStandardMaterial({
+  color: 0x3a2816,
+  roughness: 0.9,
+});
+const workerMesh = new THREE.InstancedMesh(workerGeo, workerMat, WORKER_COUNT);
+workerMesh.castShadow = true;
+workerGroup.add(workerMesh);
+
+/* Workers: each has a phase along the ramp [0..1], speed, direction */
+const workers = [];
+for (let i = 0; i < WORKER_COUNT; i++) {
+  workers.push({
+    phase: Math.random(),
+    speed: rand(0.004, 0.012) * 0.25, // slow
+    dir: Math.random() < 0.55 ? 1 : -1, // up or down
+    side: rand(-1.6, 1.6), // across ramp width
+    color: new THREE.Color().setHSL(
+      rand(0.05, 0.12),
+      rand(0.35, 0.6),
+      rand(0.14, 0.3)
+    ),
+  });
+}
+// per-instance color
+const workerColors = new Float32Array(WORKER_COUNT * 3);
+workers.forEach((w, i) => {
+  workerColors[i*3] = w.color.r;
+  workerColors[i*3+1] = w.color.g;
+  workerColors[i*3+2] = w.color.b;
+});
+workerMesh.instanceColor = new THREE.InstancedBufferAttribute(workerColors, 3);
+
+/* helper: position on the ramp at parameter t [0..1] */
+const _m4 = new THREE.Matrix4();
+const _pos = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _s = new THREE.Vector3(1, 1, 1);
+const _up = new THREE.Vector3(0, 1, 0);
+
+function rampPointAt(t, sideOffset = 0) {
+  const h = t * ramp.totalHeight;
+  const a = t * TAU * ramp.turns;
+  const r = ramp.radiusAtHeight(h);
+  const x = Math.cos(a) * r;
+  const z = Math.sin(a) * r;
+  // outward normal
+  const outward = new THREE.Vector3(x, 0, z).normalize();
+  // tangent: derivative approx
+  const dt = 0.0008;
+  const h2 = (t+dt) * ramp.totalHeight;
+  const a2 = (t+dt) * TAU * ramp.turns;
+  const r2 = ramp.radiusAtHeight(h2);
+  const x2 = Math.cos(a2) * r2;
+  const z2 = Math.sin(a2) * r2;
+  const tangent = new THREE.Vector3(x2-x, h2-h, z2-z).normalize();
+  // apply side offset along outward on the horizontal plane
+  const px = x - outward.x * sideOffset;
+  const pz = z - outward.z * sideOffset;
+  return { pos: new THREE.Vector3(px, h + 1.4, pz), tangent };
+}
+
+/* =========================================================================
+   CLOUDS — layered sprite-based clouds wrapping the mid and upper tower
+   ========================================================================= */
+const cloudGroup = new THREE.Group();
+scene.add(cloudGroup);
+
+const cloudMat = new THREE.SpriteMaterial({
+  map: TEX.cloud,
+  transparent: true,
+  depthWrite: false,
+  opacity: 0.85,
+  color: 0xfff4e0,
+});
+
+const CLOUD_COUNT = 95;
+const clouds = [];
+for (let i = 0; i < CLOUD_COUNT; i++) {
+  const m = cloudMat.clone();
+  const s = new THREE.Sprite(m);
+  // distribute mostly as a ring around upper-mid tower
+  const layer = Math.random();
+  let y, r;
+  if (layer < 0.45) {
+    // mid cloud belt
+    y = rand(TOWER_TOP_Y * 0.55, TOWER_TOP_Y * 0.82);
+    r = rand(55, 180);
+  } else if (layer < 0.85) {
+    // storm at peak
+    y = rand(TOWER_TOP_Y * 0.88, TOWER_TOP_Y * 1.3);
+    r = rand(30, 140);
+  } else {
+    // stragglers high
+    y = rand(TOWER_TOP_Y * 1.3, TOWER_TOP_Y * 1.9);
+    r = rand(80, 220);
+  }
+  const a = rand(0, TAU);
+  s.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+  const scale = rand(22, 70);
+  s.scale.set(scale, scale * rand(0.5, 0.8), 1);
+  clouds.push({
+    sprite: s,
+    angle: a,
+    radius: r,
+    y,
+    drift: rand(0.0008, 0.003),
+    layer,
+    baseOpacity: rand(0.55, 0.95),
+  });
+  cloudGroup.add(s);
+}
+
+/* =========================================================================
+   LIGHTNING — occasional strikes around the peak
+   ========================================================================= */
+const lightningGroup = new THREE.Group();
+scene.add(lightningGroup);
+
+function makeLightning(x1, y1, z1, x2, y2, z2, segments = 14) {
+  const points = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const x = x1 + (x2 - x1) * t + rand(-4, 4) * (1 - Math.abs(t - 0.5) * 2);
+    const y = y1 + (y2 - y1) * t + rand(-2, 2);
+    const z = z1 + (z2 - z1) * t + rand(-4, 4) * (1 - Math.abs(t - 0.5) * 2);
+    points.push(new THREE.Vector3(x, y, z));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({
+    color: 0xc8d8ff,
+    transparent: true,
+    opacity: 1,
+    linewidth: 2,
+  });
+  const line = new THREE.Line(geo, mat);
+  line.userData.life = 1.0;
+  return line;
+}
+
+const lightningFlash = new THREE.PointLight(0xaac8ff, 0, 800);
+lightningFlash.position.set(0, TOWER_TOP_Y + 40, 0);
+scene.add(lightningFlash);
+
+function strikeLightning() {
+  const a = rand(0, TAU);
+  const r = rand(0, 40);
+  const tx = Math.cos(a) * r;
+  const tz = Math.sin(a) * r;
+  const ty = TOWER_TOP_Y + rand(0, 20);
+  const origin = new THREE.Vector3(
+    tx + rand(-40, 40),
+    TOWER_TOP_Y + rand(80, 160),
+    tz + rand(-40, 40),
+  );
+  const bolt = makeLightning(origin.x, origin.y, origin.z, tx, ty, tz);
+  lightningGroup.add(bolt);
+
+  // secondary branches
+  for (let i = 0; i < 2; i++) {
+    if (Math.random() < 0.5) continue;
+    const mid = new THREE.Vector3(
+      (origin.x + tx)/2 + rand(-10, 10),
+      (origin.y + ty)/2 + rand(-10, 10),
+      (origin.z + tz)/2 + rand(-10, 10),
+    );
+    const end = new THREE.Vector3(
+      mid.x + rand(-30, 30),
+      mid.y + rand(-30, 10),
+      mid.z + rand(-30, 30),
+    );
+    const branch = makeLightning(mid.x, mid.y, mid.z, end.x, end.y, end.z, 8);
+    branch.userData.life = 0.6;
+    lightningGroup.add(branch);
+  }
+
+  lightningFlash.position.set(tx, ty, tz);
+  lightningFlash.intensity = 40;
+}
+
+/* =========================================================================
+   LANGUAGE PARTICLES — click the tower to trigger
+   "confusion of tongues" rising as ancient scripts
+   ========================================================================= */
+const scriptGlyphs = [
+  '𒀀','𒀁','𒀂','𒀃','𒀄','𒀅','𒀆','𒀇','𒀈','𒀉', // cuneiform
+  '𓀀','𓀁','𓀂','𓀃','𓀄','𓀅','𓂀','𓂁','𓏏','𓊖', // hieroglyphs
+  '𐤀','𐤁','𐤂','𐤃','𐤄','𐤅','𐤆','𐤇','𐤈','𐤉', // phoenician
+  'א','ב','ג','ד','ה','ו','ז','ח','ט','י', // hebrew
+  'α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π', // greek
+  'ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ','ᚺ','ᚾ','ᛁ','ᛃ','ᛇ','ᛈ','ᛉ','ᛊ', // runic
+  'ⴰ','ⴱ','ⴲ','ⴳ','ⴴ','ⴵ','ⴶ','ⴷ','ⴸ', // tifinagh
+  '卂','乙','丂','丁','丄','丅','丆','万','丈', // bopomofo-ish
+  '᐀','ᐁ','ᐂ','ᐃ','ᐄ','ᐅ','ᐆ','ᐇ','ᐈ', // canadian syllabics (used as glyph variety)
+];
+
+const scriptMaterialCache = new Map();
+function getScriptMaterial(glyph) {
+  if (scriptMaterialCache.has(glyph)) return scriptMaterialCache.get(glyph);
+  const tex = makeScriptTexture(glyph);
+  const m = new THREE.SpriteMaterial({
+    map: tex,
+    transparent: true,
+    depthWrite: false,
+    opacity: 1,
+    color: 0xffd890,
+  });
+  scriptMaterialCache.set(glyph, m);
+  return m;
+}
+
+const floatingGlyphs = [];
+function spawnLanguageBurst(origin, count = 40, intensity = 1) {
+  for (let i = 0; i < count; i++) {
+    const glyph = pick(scriptGlyphs);
+    const mat = getScriptMaterial(glyph).clone();
+    const sprite = new THREE.Sprite(mat);
+    const a = rand(0, TAU);
+    const r = rand(0.5, 6) * intensity;
+    sprite.position.set(
+      origin.x + Math.cos(a) * r,
+      origin.y + rand(-2, 2),
+      origin.z + Math.sin(a) * r
+    );
+    const s = rand(2.2, 5.5);
+    sprite.scale.set(s, s, s);
+    scene.add(sprite);
+    floatingGlyphs.push({
+      sprite,
+      life: 1,
+      decay: rand(0.0025, 0.006),
+      vy: rand(0.25, 0.7) * intensity,
+      vx: Math.cos(a) * rand(0.04, 0.14),
+      vz: Math.sin(a) * rand(0.04, 0.14),
+      spin: rand(-0.01, 0.01),
+    });
+  }
+}
+
+/* =========================================================================
+   DUST MOTES — ambient drifting particles near ground
+   ========================================================================= */
+const dustGeo = new THREE.BufferGeometry();
+const DUST_COUNT = 500;
+const dustPos = new Float32Array(DUST_COUNT * 3);
+for (let i = 0; i < DUST_COUNT; i++) {
+  const a = rand(0, TAU);
+  const r = rand(40, 500);
+  dustPos[i*3] = Math.cos(a) * r;
+  dustPos[i*3+1] = rand(0.2, 40);
+  dustPos[i*3+2] = Math.sin(a) * r;
+}
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dustMat = new THREE.PointsMaterial({
+  color: 0xe6c998,
+  size: 0.6,
+  transparent: true,
+  opacity: 0.55,
+  sizeAttenuation: true,
+  depthWrite: false,
+});
+const dust = new THREE.Points(dustGeo, dustMat);
+scene.add(dust);
+
+/* Fireflies / embers rising from base fires */
+const emberCount = 200;
+const emberGeo = new THREE.BufferGeometry();
+const emberPos = new Float32Array(emberCount * 3);
+const emberData = [];
+for (let i = 0; i < emberCount; i++) {
+  const a = rand(0, TAU);
+  const r = rand(30, 80);
+  emberData.push({
+    x: Math.cos(a) * r,
+    z: Math.sin(a) * r,
+    y: rand(0, 40),
+    vy: rand(0.05, 0.2),
+    phase: rand(0, TAU),
+  });
+  emberPos[i*3] = emberData[i].x;
+  emberPos[i*3+1] = emberData[i].y;
+  emberPos[i*3+2] = emberData[i].z;
+}
+emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPos, 3));
+const emberMat = new THREE.PointsMaterial({
+  color: 0xff9040,
+  size: 0.7,
+  transparent: true,
+  opacity: 0.9,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+const embers = new THREE.Points(emberGeo, emberMat);
+scene.add(embers);
+
+/* A few torch lights at the base */
+const torchLights = [];
+for (let i = 0; i < 6; i++) {
+  const a = (i / 6) * TAU;
+  const r = 56;
+  const l = new THREE.PointLight(0xff8030, 2.5, 80, 2.2);
+  l.position.set(Math.cos(a) * r, 3, Math.sin(a) * r);
+  scene.add(l);
+  torchLights.push(l);
+}
+
+/* =========================================================================
+   POST-PROCESSING: bloom + gentle film grain
+   ========================================================================= */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.6,   // strength
+  0.8,   // radius
+  0.78   // threshold
+);
+composer.addPass(bloom);
+
+const film = new FilmPass(0.18, false);
+composer.addPass(film);
+
+composer.addPass(new OutputPass());
+
+/* =========================================================================
+   UI / INTERACTION
+   ========================================================================= */
+const ui = {
+  tod: document.getElementById('tod'),
+  storm: document.getElementById('storm'),
+  autorot: document.getElementById('autorot'),
+  btnTop: document.getElementById('btnTop'),
+  btnBase: document.getElementById('btnBase'),
+  btnWrath: document.getElementById('btnWrath'),
+  caption: document.getElementById('caption'),
+  statHour: document.getElementById('statHour'),
+  statHeight: document.getElementById('statHeight'),
+};
+
+ui.autorot.addEventListener('change', () => {
+  controls.autoRotate = ui.autorot.checked;
+});
+
+/* Camera tweens */
+let camTween = null;
+function tweenCamera(toPos, toTarget, duration = 2.5) {
+  controls.autoRotate = false;
+  ui.autorot.checked = false;
+  camTween = {
+    t: 0, duration,
+    fromPos: camera.position.clone(),
+    toPos: toPos.clone(),
+    fromTarget: controls.target.clone(),
+    toTarget: toTarget.clone(),
+  };
+}
+
+ui.btnTop.addEventListener('click', () => {
+  tweenCamera(
+    new THREE.Vector3(70, TOWER_TOP_Y + 50, 110),
+    new THREE.Vector3(0, TOWER_TOP_Y - 10, 0),
+    3.0
+  );
+});
+ui.btnBase.addEventListener('click', () => {
+  tweenCamera(
+    new THREE.Vector3(120, 22, 130),
+    new THREE.Vector3(0, 25, 0),
+    2.6
+  );
+});
+
+let wrathTimer = 0;
+ui.btnWrath.addEventListener('click', () => {
+  wrathTimer = 6.0;
+  ui.storm.value = '1';
+  // huge burst of language symbols from the top
+  const origin = new THREE.Vector3(0, TOWER_TOP_Y + 10, 0);
+  spawnLanguageBurst(origin, 160, 2.4);
+  // Force near-night time for drama if currently day
+  const curTod = parseFloat(ui.tod.value);
+  if (curTod > 0.18 && curTod < 0.78) {
+    animateTod(0.78, 1.6);
+  }
+  // Trigger several lightning strikes
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => strikeLightning(), i * 180);
+  }
+  // Shed stones from the top
+  setTimeout(() => shedStones(50), 800);
+  setTimeout(() => shedStones(30), 1700);
+  // Thunder audio
+  playThunder();
+  showCaption(
+    '𒀀 𓂀 𐤀 א α ᚠ',
+    '“Come, let us go down, and there confound their language.”'
+  );
+  // Aim camera at tower peak briefly
+  tweenCamera(
+    new THREE.Vector3(120, TOWER_TOP_Y + 60, 180),
+    new THREE.Vector3(0, TOWER_TOP_Y - 20, 0),
+    2.0
+  );
+});
+
+/* Smooth tween the time-of-day slider */
+let todTween = null;
+function animateTod(target, duration = 2) {
+  todTween = { from: parseFloat(ui.tod.value), to: target, t: 0, duration };
+}
+
+function showCaption(script, text, duration = 4.2) {
+  ui.caption.innerHTML = `<span class="script">${script}</span>${text}`;
+  ui.caption.classList.add('visible');
+  clearTimeout(showCaption._t);
+  showCaption._t = setTimeout(() => {
+    ui.caption.classList.remove('visible');
+  }, duration * 1000);
+}
+
+/* Raycast click on tower body */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let pointerDown = null;
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerDown = { x: e.clientX, y: e.clientY };
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!pointerDown) return;
+  const dx = e.clientX - pointerDown.x;
+  const dy = e.clientY - pointerDown.y;
+  pointerDown = null;
+  if (dx*dx + dy*dy > 16) return; // it was a drag
+
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  const hits = raycaster.intersectObjects(tower.children, true);
+  if (hits.length > 0) {
+    const hit = hits[0];
+    const origin = hit.point.clone();
+
+    // What tier was this? Nearest by y
+    let tierIdx = 0;
+    for (let i = 0; i < tierInfo.length; i++) {
+      if (hit.point.y >= tierInfo[i].y && hit.point.y <= tierInfo[i].topY) {
+        tierIdx = i; break;
+      }
+    }
+    spawnLanguageBurst(origin, 30 + tierIdx * 4, 1);
+
+    // Themed captions by tier height
+    const scripts = [
+      ['𒀀 𒁍 𒊩', 'The workers speak of bricks and bitumen.'],
+      ['𓂀 𓏏 𓊖', 'Scribes mark the builders’ names in river-clay.'],
+      ['𐤀 𐤁 𐤂', 'Merchants haggle over cedar and stone.'],
+      ['א ב ג', 'Priests chant above the smoke of the altars.'],
+      ['α β γ', 'Geometers trace the angles of the upper tiers.'],
+      ['ᚠ ᚢ ᚦ', 'Messengers shout across the wind-swept scaffolds.'],
+      ['ⴰ ⴱ ⴲ', 'Foremen call their crews in a tongue none understand.'],
+      ['᐀ ᐁ ᐂ', 'The architects no longer share a single word.'],
+      ['𒀀 𓂀 ᚠ', 'At the summit, every tongue is another.'],
+    ];
+    const [script, text] = scripts[Math.min(tierIdx, scripts.length - 1)];
+    showCaption(script, text);
+  }
+});
+
+/* =========================================================================
+   ANIMATION LOOP
+   ========================================================================= */
+const clock = new THREE.Clock();
+let elapsed = 0;
+let autoStormBaseline = 0.35;
+
+/* Initial time of day from slider */
+function applyTimeOfDay(t) {
+  // t in [0..1]: 0 = midnight, 0.25 = dawn, 0.5 = noon, 0.75 = dusk, 1 = midnight
+  // Sun elevation: sine-based
+  const elev = Math.sin((t - 0.25) * TAU) * 0.9; // -0.9..0.9
+  const azim = t * TAU * 0.75 + 0.7;
+
+  const phi = Math.PI / 2 - Math.asin(elev); // from up
+  const theta = azim;
+  sun.setFromSphericalCoords(1, phi, theta);
+  skyU['sunPosition'].value.copy(sun);
+
+  const sunWorld = sun.clone().multiplyScalar(500);
+  sunLight.position.copy(sunWorld);
+  sunLight.target.position.set(0, 40, 0);
+
+  // Intensity falls at night
+  const sunI = Math.max(0, elev) * 2.8 + 0.1;
+  sunLight.intensity = sunI;
+
+  // Warm at dawn/dusk, white at noon, cool-blue at night
+  let col;
+  if (elev > 0.4) col = new THREE.Color(0xffe3b5);
+  else if (elev > 0) col = new THREE.Color().lerpColors(
+    new THREE.Color(0xff9460), new THREE.Color(0xffe3b5), elev / 0.4
+  );
+  else col = new THREE.Color().lerpColors(
+    new THREE.Color(0x2a3a6a), new THREE.Color(0xff7040), (elev + 0.3) / 0.3
+  );
+  sunLight.color.copy(col);
+
+  // Hemisphere adjusts with time
+  const nightF = Math.max(0, -elev + 0.2);
+  hemi.intensity = 0.55 - nightF * 0.25;
+  hemi.color.setHex(elev > 0.1 ? 0xbfd0ea : 0x2a3050);
+  hemi.groundColor.setHex(elev > 0 ? 0x6a4a28 : 0x1a1020);
+
+  amb.intensity = 0.15 + Math.max(0, -elev) * 0.15;
+
+  // Fog color matches atmosphere
+  let fogCol;
+  if (elev > 0.3) fogCol = new THREE.Color(0xd4b98a);
+  else if (elev > 0) fogCol = new THREE.Color().lerpColors(
+    new THREE.Color(0x8a4030), new THREE.Color(0xd4b98a), elev / 0.3
+  );
+  else fogCol = new THREE.Color().lerpColors(
+    new THREE.Color(0x0a0612), new THREE.Color(0x8a4030), Math.max(0, (elev + 0.3) / 0.3)
+  );
+  scene.fog.color.copy(fogCol);
+  renderer.setClearColor(fogCol);
+
+  // Window emissive brighter at night
+  const winI = 1.0 - Math.max(0, elev * 1.8);
+  tower.traverse(obj => {
+    if (obj.isMesh && obj.material && obj.material.emissive && obj.userData.isWindowPane) {
+      obj.material.emissiveIntensity = Math.max(0, winI) * 1.8;
+    }
+    if (obj.isMesh && obj.userData.isDoorway) {
+      obj.material.emissiveIntensity = 0.3 + Math.max(0, winI) * 0.9;
+    }
+  });
+
+  // Stars fade in at night
+  const nightness = Math.max(0, -elev * 1.8);
+  starsMat.uniforms.uOpacity.value = Math.min(1, nightness);
+  milkyWayMat.opacity = Math.min(0.9, nightness * 1.2);
+  stars.rotation.y = elapsed * 0.002;
+
+  // Moon — opposite the sun
+  const moonDir = sun.clone().multiplyScalar(-1);
+  const moonDist = 1400;
+  moon.position.set(moonDir.x * moonDist, Math.max(60, moonDir.y * moonDist), moonDir.z * moonDist);
+  moonHalo.position.copy(moon.position);
+  const moonVisible = Math.min(1, Math.max(0, -elev + 0.1) * 3);
+  moon.material.opacity = moonVisible;
+  moonHalo.material.opacity = moonVisible * 0.7;
+
+  // Sun glow — sits at sun direction
+  const sunDist = 1200;
+  sunGlow.position.set(sun.x * sunDist, Math.max(-100, sun.y * sunDist), sun.z * sunDist);
+  const sunUp = Math.max(0, elev);
+  sunGlow.material.opacity = sunUp * 0.9;
+  sunGlow.scale.setScalar(380 + (1 - sunUp) * 200);
+  // warmer glow near horizon
+  if (elev > 0.3) sunGlow.material.color.setHex(0xffd88a);
+  else if (elev > 0) sunGlow.material.color.setHex(0xff9050);
+  else sunGlow.material.color.setHex(0xff5030);
+
+  // Torch intensity
+  torchLights.forEach(l => {
+    l.intensity = 1.5 + Math.max(0, -elev + 0.2) * 4.5;
+  });
+
+  // Bloom: stronger at night
+  bloom.strength = 0.5 + Math.max(0, -elev + 0.1) * 1.4;
+
+  // Exposure subtle
+  renderer.toneMappingExposure = 0.9 - Math.max(0, -elev) * 0.3;
+
+  // Stats
+  const hh = Math.floor(t * 24);
+  const mm = Math.floor((t * 24 - hh) * 60);
+  ui.statHour.textContent = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+  ui.statHeight.textContent = Math.round(TOWER_TOP_Y * 2.5).toString();
+}
+
+/* lightning scheduling */
+let nextStrike = 2 + rand(1, 5);
+
+function animate() {
+  const dt = Math.min(0.1, clock.getDelta());
+  elapsed += dt;
+
+  /* Camera tween */
+  if (camTween) {
+    camTween.t += dt / camTween.duration;
+    const k = Math.min(1, camTween.t);
+    const e = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPos, e);
+    controls.target.lerpVectors(camTween.fromTarget, camTween.toTarget, e);
+    if (k >= 1) camTween = null;
+  }
+
+  /* Time of day tween */
+  if (todTween) {
+    todTween.t += dt / todTween.duration;
+    const k = Math.min(1, todTween.t);
+    const e = k < 0.5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2;
+    ui.tod.value = (todTween.from + (todTween.to - todTween.from) * e).toString();
+    if (k >= 1) todTween = null;
+  }
+
+  controls.update();
+
+  /* Time of day */
+  const tod = parseFloat(ui.tod.value);
+  applyTimeOfDay(tod);
+
+  /* Storminess */
+  let storm = parseFloat(ui.storm.value);
+  if (wrathTimer > 0) {
+    wrathTimer -= dt;
+    storm = Math.min(1, Math.max(storm, 0.9));
+  }
+
+  /* Clouds drift */
+  cloudGroup.rotation.y += 0.0004 + storm * 0.0015;
+  clouds.forEach((c, i) => {
+    c.angle += c.drift * (0.5 + storm * 2.0);
+    c.sprite.position.x = Math.cos(c.angle) * c.radius;
+    c.sprite.position.z = Math.sin(c.angle) * c.radius;
+    // upper clouds darken with storm
+    const isStorm = c.layer > 0.45;
+    const darkness = isStorm ? (1 - storm * 0.7) : (1 - storm * 0.25);
+    c.sprite.material.color.setRGB(darkness, darkness * 0.95, darkness * 0.9);
+    c.sprite.material.opacity = c.baseOpacity * (0.7 + storm * 0.3);
+  });
+
+  /* Lightning: timed strikes, more frequent in storms */
+  nextStrike -= dt * (0.2 + storm * 2.5);
+  if (nextStrike <= 0 && storm > 0.2) {
+    strikeLightning();
+    if (Math.random() < 0.8) {
+      setTimeout(playThunder, rand(0.2, 1.4) * 1000);
+    }
+    nextStrike = rand(0.3, 4.5) / (0.2 + storm);
+  }
+  // decay existing bolts
+  for (let i = lightningGroup.children.length - 1; i >= 0; i--) {
+    const bolt = lightningGroup.children[i];
+    bolt.userData.life -= dt * 4.5;
+    bolt.material.opacity = Math.max(0, bolt.userData.life);
+    if (bolt.userData.life <= 0) {
+      bolt.geometry.dispose();
+      bolt.material.dispose();
+      lightningGroup.remove(bolt);
+    }
+  }
+  // flash light decay
+  lightningFlash.intensity *= Math.pow(0.02, dt);
+
+  /* Workers walk the ramp */
+  for (let i = 0; i < WORKER_COUNT; i++) {
+    const w = workers[i];
+    w.phase += w.speed * w.dir * (0.5 + Math.sin(elapsed * 0.8 + i) * 0.1);
+    if (w.phase > 1) w.phase -= 1;
+    if (w.phase < 0) w.phase += 1;
+    const { pos, tangent } = rampPointAt(w.phase, w.side);
+    // small bob
+    pos.y += Math.sin(elapsed * 6 + i) * 0.08;
+    _pos.copy(pos);
+    // orient along tangent
+    _q.setFromUnitVectors(_up, new THREE.Vector3(0, 1, 0.0001));
+    _m4.compose(_pos, _q, _s.set(0.9, 0.9, 0.9));
+    workerMesh.setMatrixAt(i, _m4);
+  }
+  workerMesh.instanceMatrix.needsUpdate = true;
+
+  /* Language glyph particles update */
+  for (let i = floatingGlyphs.length - 1; i >= 0; i--) {
+    const g = floatingGlyphs[i];
+    g.sprite.position.y += g.vy;
+    g.sprite.position.x += g.vx;
+    g.sprite.position.z += g.vz;
+    g.vy *= 0.995;
+    g.life -= g.decay;
+    g.sprite.material.opacity = Math.max(0, g.life);
+    g.sprite.material.rotation += g.spin;
+    if (g.life <= 0) {
+      scene.remove(g.sprite);
+      g.sprite.material.dispose();
+      floatingGlyphs.splice(i, 1);
+    }
+  }
+
+  /* Dust drift */
+  dust.rotation.y += dt * 0.008;
+
+  /* Embers update */
+  const pA = emberGeo.attributes.position;
+  for (let i = 0; i < emberCount; i++) {
+    const e = emberData[i];
+    e.y += e.vy;
+    e.phase += 0.05;
+    if (e.y > 60) {
+      const a = rand(0, TAU);
+      const r = rand(30, 80);
+      e.x = Math.cos(a) * r;
+      e.z = Math.sin(a) * r;
+      e.y = rand(0, 8);
+      e.vy = rand(0.05, 0.2);
+    }
+    pA.setX(i, e.x + Math.sin(e.phase) * 0.5);
+    pA.setY(i, e.y);
+    pA.setZ(i, e.z + Math.cos(e.phase) * 0.5);
+  }
+  pA.needsUpdate = true;
+
+  /* Altar fire particles */
+  const firePA = fireGeo.attributes.position;
+  for (let i = 0; i < firePointsCount; i++) {
+    const p = fireData[i];
+    p.life += dt;
+    if (p.life > p.maxLife) {
+      p.life = 0;
+      p.maxLife = rand(0.8, 1.8);
+      p.vy = rand(0.2, 0.6);
+      p.phase = rand(0, TAU);
+    }
+    const t = p.life / p.maxLife;
+    const rise = t * 3.5;
+    const wobble = Math.sin(elapsed * 10 + p.phase) * 0.3 * t;
+    firePA.setX(i, p.ox + wobble);
+    firePA.setY(i, p.oy + rise);
+    firePA.setZ(i, p.oz + Math.cos(elapsed * 8 + p.phase) * 0.3 * t);
+  }
+  firePA.needsUpdate = true;
+  // flicker altar lights
+  altars.forEach((a, i) => {
+    a.light.intensity = 5 + Math.sin(elapsed * 12 + i * 1.7) * 1.5 + Math.random() * 0.8;
+  });
+
+  /* Smoke puffs */
+  smokePuffs.forEach((p) => {
+    p.age += dt;
+    if (p.age > p.maxAge) {
+      p.age = 0;
+      p.angle = rand(0, TAU);
+    }
+    const t = p.age / p.maxAge;
+    const rise = t * 45;
+    const out = t * p.swirl * 6;
+    p.sprite.position.set(
+      p.altarPos.x + Math.cos(p.angle + t * 2) * out,
+      p.altarPos.y + rise,
+      p.altarPos.z + Math.sin(p.angle + t * 2) * out,
+    );
+    const grow = 1 + t * 2.5;
+    p.sprite.scale.set(p.startScale * grow, p.startScale * grow, 1);
+    p.sprite.material.opacity = (1 - t) * 0.4 * (0.6 + storm * 0.8);
+  });
+
+  /* Banners wave */
+  banners.forEach((b, idx) => {
+    const pos = b.flag.geometry.attributes.position;
+    const orig = b.originalPositions;
+    const wind = 2 + storm * 4;
+    for (let v = 0; v < pos.count; v++) {
+      const ox = orig[v*3], oy = orig[v*3+1], oz = orig[v*3+2];
+      // x goes from -2 (pole) to +2 (tail)
+      const fromPole = (ox + 2) / 4;
+      const wave = Math.sin(elapsed * (3 + idx * 0.1) - ox * 1.6 + b.phase) * fromPole;
+      pos.setZ(v, oz + wave * 0.6 * wind * 0.2);
+      pos.setY(v, oy + Math.cos(elapsed * 2 - ox * 0.8 + b.phase) * fromPole * 0.2 * wind * 0.2);
+    }
+    pos.needsUpdate = true;
+    b.flag.geometry.computeVertexNormals();
+  });
+
+  /* Birds fly */
+  for (let i = 0; i < birdCount; i++) {
+    const b = birds[i];
+    b.phase += b.speed * dt;
+    b.wingPhase += dt * (10 + Math.abs(b.speed) * 20);
+    const bx = Math.cos(b.phase) * b.radius;
+    const bz = Math.sin(b.phase) * b.radius;
+    const tangent = new THREE.Vector3(-Math.sin(b.phase), 0, Math.cos(b.phase))
+      .multiplyScalar(Math.sign(b.speed));
+    _pos.set(bx, b.height + Math.sin(b.wingPhase * 0.5) * 1.2, bz);
+    // orient towards travel
+    const m = new THREE.Matrix4();
+    const lookAt = new THREE.Vector3().copy(_pos).add(tangent);
+    m.lookAt(_pos, lookAt, _up);
+    // bird flap: scale y slightly with wing cycle
+    const wingScale = 1 + Math.sin(b.wingPhase) * 0.4;
+    const sm = new THREE.Matrix4().makeScale(b.size, b.size * wingScale, b.size);
+    m.multiply(sm);
+    m.setPosition(_pos);
+    birdMesh.setMatrixAt(i, m);
+  }
+  birdMesh.instanceMatrix.needsUpdate = true;
+
+  /* Rain — stronger with storm */
+  const rainPosA = rainGeo.attributes.position;
+  const rainSpeedA = rainGeo.attributes.speed;
+  const rainActive = storm;
+  rainMat.uniforms.uOpacity.value = Math.pow(rainActive, 1.3);
+  if (rainActive > 0.05) {
+    for (let i = 0; i < rainCount; i++) {
+      let y = rainPosA.getY(i) - rainSpeedA.getX(i) * dt * (0.7 + storm);
+      if (y < 0) {
+        y = TOWER_TOP_Y + rand(60, 140);
+        rainPosA.setX(i, rand(-rainArea, rainArea));
+        rainPosA.setZ(i, rand(-rainArea, rainArea));
+      }
+      rainPosA.setY(i, y);
+    }
+    rainPosA.needsUpdate = true;
+  }
+
+  /* Divine beam animation */
+  const targetBeam = Math.max(0, wrathTimer / 6);
+  beamMat.uniforms.uTime.value = elapsed;
+  const curBeamI = beamMat.uniforms.uIntensity.value;
+  const newBeamI = curBeamI + (targetBeam - curBeamI) * Math.min(1, dt * 2.0);
+  beamMat.uniforms.uIntensity.value = newBeamI;
+  innerBeam.material.uniforms.uTime.value = elapsed;
+  innerBeam.material.uniforms.uIntensity.value = newBeamI * 1.4;
+  divineBeam.rotation.y += dt * 0.2;
+  innerBeam.rotation.y -= dt * 0.35;
+
+  /* Stone chunk physics */
+  for (let i = stoneChunks.length - 1; i >= 0; i--) {
+    const s = stoneChunks[i];
+    s.life -= dt;
+    s.vy -= 22 * dt; // gravity
+    s.mesh.position.x += s.vx * dt;
+    s.mesh.position.y += s.vy * dt;
+    s.mesh.position.z += s.vz * dt;
+    s.mesh.rotation.x += s.vrx * dt;
+    s.mesh.rotation.y += s.vry * dt;
+    s.mesh.rotation.z += s.vrz * dt;
+    if (s.mesh.position.y < 0.4) {
+      s.mesh.position.y = 0.4;
+      s.vy *= -0.3;
+      s.vx *= 0.6; s.vz *= 0.6;
+      s.vrx *= 0.5; s.vry *= 0.5; s.vrz *= 0.5;
+    }
+    if (s.life <= 0) {
+      scene.remove(s.mesh);
+      s.mesh.geometry.dispose();
+      stoneChunks.splice(i, 1);
+    }
+  }
+
+  /* Stars twinkle */
+  starsMat.uniforms.uTime.value = elapsed;
+
+  composer.render(dt);
+  requestAnimationFrame(animate);
+}
+
+/* Resize */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  bloom.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* =========================================================================
+   AUDIO — procedural ambient wind + thunder, via WebAudio
+   ========================================================================= */
+let audioCtx = null;
+let audioStarted = false;
+let windGain = null;
+let windNoise = null;
+let audioMaster = null;
+
+function initAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioMaster = audioCtx.createGain();
+  audioMaster.gain.value = 0.5;
+  audioMaster.connect(audioCtx.destination);
+
+  // Wind: filtered noise
+  const bufSize = audioCtx.sampleRate * 3;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  windNoise = audioCtx.createBufferSource();
+  windNoise.buffer = buf;
+  windNoise.loop = true;
+
+  const filt = audioCtx.createBiquadFilter();
+  filt.type = 'bandpass';
+  filt.frequency.value = 380;
+  filt.Q.value = 0.6;
+
+  const filt2 = audioCtx.createBiquadFilter();
+  filt2.type = 'lowpass';
+  filt2.frequency.value = 800;
+
+  windGain = audioCtx.createGain();
+  windGain.gain.value = 0.08;
+
+  windNoise.connect(filt);
+  filt.connect(filt2);
+  filt2.connect(windGain);
+  windGain.connect(audioMaster);
+  windNoise.start();
+
+  // Low drone
+  const drone = audioCtx.createOscillator();
+  drone.type = 'sine';
+  drone.frequency.value = 52;
+  const droneGain = audioCtx.createGain();
+  droneGain.gain.value = 0.04;
+  drone.connect(droneGain);
+  droneGain.connect(audioMaster);
+  drone.start();
+
+  // Modulate wind gain with LFO-like timer via animation loop
+  setInterval(() => {
+    if (!windGain) return;
+    const target = 0.04 + Math.random() * 0.08;
+    windGain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + 1.8);
+  }, 1800);
+}
+
+function playThunder() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const bufSize = audioCtx.sampleRate * 2.5;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) {
+    const t = i / audioCtx.sampleRate;
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 1.4);
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 180;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.001, now);
+  g.gain.linearRampToValueAtTime(0.9, now + 0.1);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+  src.connect(lp); lp.connect(g); g.connect(audioMaster);
+  src.start(now);
+}
+
+/* Start audio on first user interaction */
+function bindAudioKickoff() {
+  const start = () => {
+    initAudio();
+    window.removeEventListener('pointerdown', start);
+    window.removeEventListener('keydown', start);
+  };
+  window.addEventListener('pointerdown', start);
+  window.addEventListener('keydown', start);
+}
+bindAudioKickoff();
+
+/* =========================================================================
+   OPENING CINEMATIC — slow swoop in
+   ========================================================================= */
+function openingCinematic() {
+  // Start far, high, looking at peak; sweep down to hero angle
+  camera.position.set(480, 260, 520);
+  controls.target.set(0, TOWER_TOP_Y * 0.6, 0);
+  controls.autoRotate = false;
+  ui.autorot.checked = false;
+
+  setTimeout(() => {
+    tweenCamera(
+      new THREE.Vector3(180, 95, 220),
+      new THREE.Vector3(0, 70, 0),
+      5.0
+    );
+    setTimeout(() => {
+      controls.autoRotate = true;
+      ui.autorot.checked = true;
+    }, 5200);
+  }, 400);
+}
+
+/* Kick things off */
+applyTimeOfDay(parseFloat(ui.tod.value));
+openingCinematic();
+animate();
+
+/* Fade out loader */
+setTimeout(() => { loader.classList.add('done'); }, 500);
+setTimeout(() => { loader.remove(); }, 2200);
+
+/* A first, gentle language wisp at the top so users notice the effect */
+setTimeout(() => {
+  spawnLanguageBurst(new THREE.Vector3(0, TOWER_TOP_Y + 6, 0), 18, 1.2);
+}, 2400);
+
+</script>
+</body>
+</html>
